@@ -55,7 +55,7 @@ class Order(models.Model):
 
 
 class Ticket(models.Model):
-    cargo = models.PositiveIntegerField(default=0)
+    cargo = models.PositiveIntegerField(default=0, help_text="one cargo unit is 10 kg (9kg - 1 unit, 10kg - 1 unit, 11kg - 2 units)")
     seat = models.PositiveIntegerField(default=1)
     journey = models.ForeignKey("Journey", on_delete=models.CASCADE, related_name="tickets")
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="tickets")

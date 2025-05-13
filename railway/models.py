@@ -20,8 +20,7 @@ class TrainType(models.Model):
 
 class Train(models.Model):
     name = models.CharField(max_length=255, unique=True)
-    cargo_num = models.PositiveIntegerField(help_text="amount of cargo units (unit stores passengers cargo)")
-    places_in_cargo = models.PositiveIntegerField(help_text="describes how many places in one cargo unit")
+    places_for_cargo = models.PositiveIntegerField()
     train_type = models.ForeignKey(TrainType, on_delete=models.CASCADE, related_name="trains")
 
     def __str__(self):
@@ -69,6 +68,7 @@ class Journey(models.Model):
     train = models.ForeignKey(Train, on_delete=models.CASCADE, related_name="journeys")
     departure_time = models.DateTimeField()
     arrival_time = models.DateTimeField()
+    crew = models.ManyToManyField(Crew, related_name="journeys")
 
     def __str__(self):
         return f"{self.route} [{self.departure_time} - {self.arrival_time}]"

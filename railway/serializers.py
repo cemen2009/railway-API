@@ -84,6 +84,17 @@ class CrewSerializer(serializers.ModelSerializer):
         fields = ["id", "first_name", "last_name"]
 
 
+class CrewListSerializer(CrewSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Crew
+        fields = ["full_name"]
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}"
+
+
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
@@ -105,12 +116,35 @@ class OrderRetrieveSerializer(OrderSerializer):
     user = UserSerializer(many=False, read_only=True)
 
 
+class JourneySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Journey
+        fields = ["id", "route", "train", "departure_time", "arrival_time", "crew"]
+
+
+class JourneyListSerializer(JourneySerializer):
+    route = serializers.SerializerMethodField()
+    train = serializers.CharField(source="train.train_type.name", read_only=True)
+    crew = CrewListSerializer(many=True, read_only=True)
+
+    def get_route(self, obj):
+        return f"{obj.route.source} => {obj.route.destination}"
+
+
+class JourneyRetrieveSerializer(JourneySerializer):
+    crew = CrewListSerializer(many=True, read_only=True)
+    route = RouteListSerializer(many=False, read_only=True)
+    train = TrainRetrieveSerializer(many=False, read_only=True)
+
+
 class TicketSerializer(serializers.ModelSerializer):
     min_checked_baggage_mass = serializers.SerializerMethodField()
     max_checked_baggage_mass = serializers.IntegerField(
         source="journey.train.max_checked_baggage_mass",
-        read_only=True
+        read_only=True,
     )
+    journey = JourneyListSerializer(many=False, read_only=True)
+    order = OrderListSerializer(many=False, read_only=True)
 
     class Meta:
         model = Ticket
@@ -129,9 +163,3 @@ class TicketSerializer(serializers.ModelSerializer):
 
     def get_min_checked_baggage_mass(self, obj):
         return obj.journey.train.min_checked_baggage_mass
-
-
-class JourneySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Journey
-        fields = ["id", "route", "train", "departure_time", "arrival_time", "crew"]

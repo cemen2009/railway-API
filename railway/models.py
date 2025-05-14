@@ -20,8 +20,24 @@ class TrainType(models.Model):
 
 class Train(models.Model):
     name = models.CharField(max_length=255, unique=True)
-    places_for_cargo = models.PositiveIntegerField()
-    train_type = models.ForeignKey(TrainType, on_delete=models.CASCADE, related_name="trains")
+
+    # IRL we also count volume of the baggage (e.g. not longer than 200cm) but I want to simplify for now
+    max_checked_baggage_mass = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Passengers may bring one item of hand luggage. "
+                  "Checked baggage exceeding max checked baggage mass will incur an additional charge."
+    )
+    min_checked_baggage_mass = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="If mass of checked baggage is less - customer shouldn't pay for it"
+    )
+    train_type = models.ForeignKey(
+        TrainType,
+        on_delete=models.CASCADE,
+        related_name="trains"
+    )
 
     def __str__(self):
         return f"{self.name} ({self.train_type})"
@@ -54,7 +70,10 @@ class Order(models.Model):
 
 
 class Ticket(models.Model):
-    cargo = models.PositiveIntegerField(default=0, help_text="one cargo unit is 10 kg (9kg - 1 unit, 10kg - 1 unit, 11kg - 2 units)")
+    checked_baggage_charge = models.BooleanField(
+        default=False,
+        help_text="Customer should pay extra fee if checked baggage exceeds min checked baggage mass."
+    )
     seat = models.PositiveIntegerField(default=1)
     journey = models.ForeignKey("Journey", on_delete=models.CASCADE, related_name="tickets")
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="tickets")

@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from rest_framework.exceptions import ValidationError
 
 
 class Station(models.Model):
@@ -49,6 +50,14 @@ class Route(models.Model):
     # transit_stations = ...
     distance = models.PositiveIntegerField(help_text="distance in kilometers")
 
+    def clean(self):
+        if self.destination == self.source:
+            raise ValidationError("Source and destination must be different.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.source} => {self.destination}"
 
@@ -88,6 +97,14 @@ class Journey(models.Model):
     departure_time = models.DateTimeField()
     arrival_time = models.DateTimeField()
     crew = models.ManyToManyField(Crew, related_name="journeys")
+
+    def clean(self):
+        if self.departure_time <= self.arrival_time:
+            raise ValidationError("Arrival time must be after departure time.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.route} [{self.departure_time} - {self.arrival_time}]"

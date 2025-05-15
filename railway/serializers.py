@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from railway.models import (
     Station,
@@ -58,6 +59,11 @@ class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
         fields = ["id", "source", "destination", "distance"]
+
+    def validate(self, attrs):
+        if attrs["destination"] == attrs["source"]:
+            raise ValidationError("Destination must be different.")
+        return attrs
 
 
 class RouteListSerializer(RouteSerializer):
@@ -121,6 +127,11 @@ class JourneySerializer(serializers.ModelSerializer):
         model = Journey
         fields = ["id", "route", "train", "departure_time", "arrival_time", "crew"]
 
+    def validate(self, attrs):
+        if attrs["departure_time"] <= attrs["arrival_time"]:
+            raise ValidationError("Arrival time must be after departure time.")
+        return attrs
+
 
 class JourneyListSerializer(JourneySerializer):
     route = serializers.SerializerMethodField()
@@ -143,8 +154,8 @@ class TicketSerializer(serializers.ModelSerializer):
         source="journey.train.max_checked_baggage_mass",
         read_only=True,
     )
-    journey = JourneyListSerializer(many=False, read_only=True)
-    order = OrderListSerializer(many=False, read_only=True)
+    journey = JourneyListSerializer(many=False, read_only=False)
+    order = OrderListSerializer(many=False, read_only=False)
 
     class Meta:
         model = Ticket

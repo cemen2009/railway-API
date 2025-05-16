@@ -219,7 +219,21 @@ class TicketSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-# TODO: create list/retrieve/create-update serializers AND simplify default one
+class TicketListSerializer(TicketSerializer):
+    journey = JourneyListSerializer(many=False, read_only=True)
+    seat = serializers.SlugRelatedField(
+        many=False,
+        read_only=True,
+        slug_field="number"
+    )
+    order = serializers.SerializerMethodField()
+
+    def get_order(self, obj):
+        return f"ID {obj.order.id} ({obj.order.user.email})"
+
+
+class TicketRetrieveSerializer(TicketListSerializer):
+    order = OrderListSerializer(many=False, read_only=True)
 
 
 class SeatSerializer(serializers.ModelSerializer):

@@ -20,7 +20,7 @@ from railway.serializers import (
     TicketSerializer,
     JourneySerializer, TrainRetrieveSerializer, RouteListSerializer, RouteRetrieveSerializer, OrderListSerializer,
     OrderRetrieveSerializer, CrewListSerializer, JourneyListSerializer, JourneyRetrieveSerializer, SeatSerializer,
-    SeatRetrieveSerializer, SeatListSerializer,
+    SeatRetrieveSerializer, SeatListSerializer, TicketRetrieveSerializer, TicketListSerializer,
 )
 
 
@@ -101,6 +101,10 @@ class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = TicketSerializer
 
     def get_serializer_class(self):
+        if self.action == "retrieve":
+            return TicketRetrieveSerializer
+        if self.action == "list":
+            return TicketListSerializer
         return TicketSerializer
 
 

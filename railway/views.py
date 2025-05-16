@@ -7,7 +7,7 @@ from railway.models import (
     Route,
     Crew,
     Order,
-    Ticket, Journey,
+    Ticket, Journey, Seat,
 )
 from railway.serializers import (
     StationSerializer,
@@ -19,7 +19,8 @@ from railway.serializers import (
     OrderSerializer,
     TicketSerializer,
     JourneySerializer, TrainRetrieveSerializer, RouteListSerializer, RouteRetrieveSerializer, OrderListSerializer,
-    OrderRetrieveSerializer, CrewListSerializer, JourneyListSerializer, JourneyRetrieveSerializer,
+    OrderRetrieveSerializer, CrewListSerializer, JourneyListSerializer, JourneyRetrieveSerializer, SeatSerializer,
+    SeatRetrieveSerializer, SeatListSerializer,
 )
 
 
@@ -43,6 +44,18 @@ class TrainViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             return TrainRetrieveSerializer
         return TrainSerializer
+
+
+class SeatViewSet(viewsets.ModelViewSet):
+    queryset = Seat.objects.all()
+    serializer_class = SeatSerializer
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return SeatRetrieveSerializer
+        if self.action == "list":
+            return SeatListSerializer
+        return SeatSerializer
 
 
 class RouteViewSet(viewsets.ModelViewSet):

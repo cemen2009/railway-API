@@ -9,6 +9,7 @@ from railway.views import (
     OrderViewSet,
     TicketViewSet,
     JourneyViewSet,
+    SeatViewSet,
 )
 
 
@@ -17,6 +18,7 @@ router = DefaultRouter()
 router.register("stations", StationViewSet, basename="stations")
 router.register("train-types", TrainTypeViewSet, basename="train_types")
 router.register("trains", TrainViewSet, basename="trains")
+router.register("seats", SeatViewSet, basename="seats")
 router.register("routes", RouteViewSet, basename="routes")
 router.register("crews", CrewViewSet, basename="crews")
 router.register("orders", OrderViewSet, basename="orders")

@@ -21,6 +21,7 @@ class TrainType(models.Model):
 
 class Train(models.Model):
     number = models.CharField(max_length=255, unique=True)
+    seats = models.PositiveIntegerField()
 
     # IRL we also count volume of the baggage (e.g. not longer than 200cm) but I want to simplify for now
     max_checked_baggage_mass = models.PositiveIntegerField(
@@ -50,6 +51,20 @@ class Train(models.Model):
 
     def __str__(self):
         return f"{self.number} ({self.train_type})"
+
+
+class Seat(models.Model):
+    number = models.PositiveIntegerField()
+    journey = models.ForeignKey("Journey", related_name="seats", on_delete=models.CASCADE)
+    is_occupied = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["journey", "number"], name="unique_seats")
+        ]
+
+    def __str__(self):
+        return f"{self.journey} (#{self.number})"
 
 
 class Route(models.Model):
@@ -96,12 +111,12 @@ class Ticket(models.Model):
         default=False,
         help_text="Customer should pay extra fee if checked baggage exceeds min checked baggage mass."
     )
-    seat = models.PositiveIntegerField(default=1)
+    seat = models.ForeignKey(Seat, on_delete=models.CASCADE, related_name="tickets")
     journey = models.ForeignKey("Journey", on_delete=models.CASCADE, related_name="tickets")
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="tickets")
 
     def __str__(self):
-        return f"{self.journey} (seats: {self.seat})"
+        return f"{self.seat} [{self.order.user}]"
 
 
 class Journey(models.Model):
@@ -112,12 +127,18 @@ class Journey(models.Model):
     crew = models.ManyToManyField(Crew, related_name="journeys")
 
     def clean(self):
-        if self.departure_time <= self.arrival_time:
+        if self.departure_time >= self.arrival_time:
             raise ValidationError("Arrival time must be after departure time.")
 
     def save(self, *args, **kwargs):
         self.full_clean()
+        creating = self.pk is None
         super().save(*args, **kwargs)
+        if creating:
+            Seat.objects.bulk_create([
+                Seat(journey=self, number=i+1)
+                for i in range(1, self.train.seats + 1)
+            ])
 
     def __str__(self):
         return f"{self.route} [{self.departure_time} - {self.arrival_time}]"

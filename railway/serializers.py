@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator
@@ -9,7 +10,7 @@ from railway.models import (
     Train,
     Route,
     Crew,
-    Order, Ticket, Journey,
+    Order, Ticket, Journey, Seat,
 )
 
 
@@ -37,7 +38,7 @@ class TrainTypeSerializer(serializers.ModelSerializer):
 class TrainSerializer(serializers.ModelSerializer):
     class Meta:
         model = Train
-        fields = ["id", "number", "max_checked_baggage_mass", "min_checked_baggage_mass", "train_type"]
+        fields = ["id", "number", "max_checked_baggage_mass", "min_checked_baggage_mass", "train_type", "seats"]
         extra_kwargs = {
             "max_checked_baggage_mass": {"label": "Max checked baggage mass (kg)"},
             "min_checked_baggage_mass": {"label": "Min checked baggage mass (kg)"},
@@ -139,7 +140,7 @@ class JourneySerializer(serializers.ModelSerializer):
         fields = ["id", "route", "train", "departure_time", "arrival_time", "crew"]
 
     def validate(self, attrs):
-        if attrs["departure_time"] <= attrs["arrival_time"]:
+        if attrs["departure_time"] >= attrs["arrival_time"]:
             raise ValidationError("Arrival time must be after departure time.")
         return attrs
 
@@ -165,8 +166,9 @@ class TicketSerializer(serializers.ModelSerializer):
         source="journey.train.max_checked_baggage_mass",
         read_only=True,
     )
-    journey = JourneyListSerializer(many=False, read_only=False)
-    order = OrderListSerializer(many=False, read_only=False)
+    # journey = JourneyListSerializer(many=False, read_only=False)
+    journey = serializers.PrimaryKeyRelatedField(queryset=Journey.objects.filter(departure_time__gt=timezone.now()))
+    # order = OrderListSerializer(many=False, read_only=True)
 
     class Meta:
         model = Ticket
@@ -175,13 +177,71 @@ class TicketSerializer(serializers.ModelSerializer):
             "min_checked_baggage_mass",
             "max_checked_baggage_mass",
             "checked_baggage_charge",
-            "seat",
             "journey",
+            "seat",
             "order"
         ]
-        extra_kwargs = {
-            "seat": {"label": "Amount of seats"},
-        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # filtering seats according to journey id from POST/PATCH json
+        #
+        # e.g. {"journey": 5, "seat": 65, ...}
+        # then we create queryset with seats only for journey with ID 5
+
+        data = kwargs.get("data", {})
+        journey_id = data.get("journey")
+        if journey_id:
+            self.fields["seat"].queryset = Seat.objects.filter(
+                journey_id=journey_id,
+                is_occupied=False,
+            )
 
     def get_min_checked_baggage_mass(self, obj):
         return obj.journey.train.min_checked_baggage_mass
+
+    def validate(self, data):
+        seat = data["seat"]
+        journey = data["journey"]
+
+        if seat.journey != journey:
+            raise ValidationError("Seat doesn't belong to the selected journey.")
+        if seat.is_occupied:
+            raise ValidationError("Seat is already occupied.")
+
+        return data
+
+    def create(self, validated_data):
+        seat = validated_data["seat"]
+        seat.is_occupied = True
+        seat.save()
+        return super().create(validated_data)
+
+
+# TODO: create list/retrieve/create-update serializers AND simplify default one
+
+
+class SeatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Seat
+        fields = ["id", "number", "journey", "is_occupied"]
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Seat.objects.all(),
+                fields=["number", "journey"],
+                message="Train can not has same seat numbers."
+            )
+        ]
+
+
+class SeatRetrieveSerializer(SeatSerializer):
+    journey = JourneyListSerializer(many=False, read_only=True)
+
+
+class SeatListSerializer(SeatSerializer):
+    journey = serializers.SerializerMethodField()
+
+    def get_journey(self, obj):
+        return (f"{obj.journey.route.source} => {obj.journey.route.destination} "
+                f"[{obj.journey.departure_time} - {obj.journey.arrival_time}]")

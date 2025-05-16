@@ -20,7 +20,7 @@ class TrainType(models.Model):
 
 
 class Train(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    number = models.CharField(max_length=255, unique=True)
 
     # IRL we also count volume of the baggage (e.g. not longer than 200cm) but I want to simplify for now
     max_checked_baggage_mass = models.PositiveIntegerField(
@@ -40,8 +40,16 @@ class Train(models.Model):
         related_name="trains"
     )
 
+    def clean(self):
+        if self.max_checked_baggage_mass <= self.min_checked_baggage_mass:
+            raise ValidationError("Prohibited baggage mass can't be less than or equal to minimum baggage mass.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.name} ({self.train_type})"
+        return f"{self.number} ({self.train_type})"
 
 
 class Route(models.Model):
@@ -60,6 +68,11 @@ class Route(models.Model):
 
     def __str__(self):
         return f"{self.source} => {self.destination}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["source", "destination"], name="unique_route")
+        ]
 
 
 class Crew(models.Model):

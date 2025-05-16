@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.validators import UniqueTogetherValidator
 
 from railway.models import (
     Station,
@@ -36,11 +37,16 @@ class TrainTypeSerializer(serializers.ModelSerializer):
 class TrainSerializer(serializers.ModelSerializer):
     class Meta:
         model = Train
-        fields = ["id", "name", "max_checked_baggage_mass", "min_checked_baggage_mass", "train_type"]
+        fields = ["id", "number", "max_checked_baggage_mass", "min_checked_baggage_mass", "train_type"]
         extra_kwargs = {
             "max_checked_baggage_mass": {"label": "Max checked baggage mass (kg)"},
             "min_checked_baggage_mass": {"label": "Min checked baggage mass (kg)"},
         }
+
+    def validate(self, attrs):
+        if attrs["max_checked_baggage_mass"] <= attrs["min_checked_baggage_mass"]:
+            raise ValidationError("Prohibited baggage mass can't be less than or equal to minimum baggage mass.")
+        return attrs
 
 
 class TrainListSerializer(TrainSerializer):
@@ -59,6 +65,13 @@ class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
         fields = ["id", "source", "destination", "distance"]
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Route.objects.all(),
+                fields=["source", "destination"],
+                message="This route already exists.",
+            )
+        ]
 
     def validate(self, attrs):
         if attrs["destination"] == attrs["source"]:
@@ -105,8 +118,6 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ["id", "created_at", "user"]
-
-        # I don't have authentication rn, so this stuff doesn't make any sense
         read_only_fields = ["id", "created_at", "user"]
 
 

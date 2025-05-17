@@ -97,6 +97,9 @@ class OrderViewSet(viewsets.ModelViewSet):
             return OrderRetrieveSerializer
         return OrderSerializer
 
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
+
 
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()

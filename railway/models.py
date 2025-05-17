@@ -8,12 +8,18 @@ class Station(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
 
+    class Meta:
+        ordering = ["name", "id"]
+
     def __str__(self):
         return self.name
 
 
 class TrainType(models.Model):
     name = models.CharField(max_length=255, unique=True)
+
+    class Meta:
+        ordering = ["name", "id"]
 
     def __str__(self):
         return self.name
@@ -37,6 +43,9 @@ class Train(models.Model):
         related_name="trains"
     )
 
+    class Meta:
+        ordering = ["train_type", "number"]
+
     def clean(self):
         if self.max_checked_baggage_mass <= self.min_checked_baggage_mass:
             raise ValidationError("Prohibited baggage mass can't be less than or equal to minimum baggage mass.")
@@ -55,6 +64,7 @@ class Seat(models.Model):
     is_occupied = models.BooleanField(default=False)
 
     class Meta:
+        ordering = ["number", "id"]
         constraints = [
             models.UniqueConstraint(fields=["journey", "number"], name="unique_seats")
         ]
@@ -69,6 +79,11 @@ class Route(models.Model):
     # transit_stations = ...
     distance = models.PositiveIntegerField(help_text="distance in kilometers")
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["source", "destination"], name="unique_route")
+        ]
+
     def clean(self):
         if self.destination == self.source:
             raise ValidationError("Source and destination must be different.")
@@ -80,15 +95,13 @@ class Route(models.Model):
     def __str__(self):
         return f"{self.source} => {self.destination}"
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["source", "destination"], name="unique_route")
-        ]
-
 
 class Crew(models.Model):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
+
+    class Meta:
+        ordering = ["first_name", "last_name", "id"]
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -98,8 +111,11 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="orders")
 
+    class Meta:
+        ordering = ["-created_at", "id"]
+
     def __str__(self):
-        return f"Order of {self.user}"
+        return f"Order of {self.user} ({self.created_at})"
 
 
 class Ticket(models.Model):
@@ -111,6 +127,9 @@ class Ticket(models.Model):
     journey = models.ForeignKey("Journey", on_delete=models.CASCADE, related_name="tickets")
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="tickets")
 
+    class Meta:
+        ordering = ["-order__created_at", "id"]
+
     def __str__(self):
         return f"{self.seat} [{self.order.user}]"
 
@@ -121,6 +140,9 @@ class Journey(models.Model):
     departure_time = models.DateTimeField()
     arrival_time = models.DateTimeField()
     crew = models.ManyToManyField(Crew, related_name="journeys")
+
+    class Meta:
+        ordering = ["-departure_time", "id"]
 
     def clean(self):
         if self.departure_time >= self.arrival_time:

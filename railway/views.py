@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.permissions import IsAdminUser
 
 from railway.models import (
     Station,
@@ -49,6 +50,7 @@ class TrainViewSet(viewsets.ModelViewSet):
 class SeatViewSet(viewsets.ModelViewSet):
     queryset = Seat.objects.all()
     serializer_class = SeatSerializer
+    permission_classes = (IsAdminUser,)
 
     def get_serializer_class(self):
         if self.action == "retrieve":

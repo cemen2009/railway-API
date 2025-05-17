@@ -166,9 +166,7 @@ class TicketSerializer(serializers.ModelSerializer):
         source="journey.train.max_checked_baggage_mass",
         read_only=True,
     )
-    # journey = JourneyListSerializer(many=False, read_only=False)
     journey = serializers.PrimaryKeyRelatedField(queryset=Journey.objects.filter(departure_time__gt=timezone.now()))
-    # order = OrderListSerializer(many=False, read_only=True)
 
     class Meta:
         model = Ticket

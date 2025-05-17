@@ -25,14 +25,10 @@ class Train(models.Model):
 
     # IRL we also count volume of the baggage (e.g. not longer than 200cm) but I want to simplify for now
     max_checked_baggage_mass = models.PositiveIntegerField(
-        blank=True,
-        null=True,
         help_text="Passengers may bring one item of hand luggage. "
                   "Checked baggage exceeding max checked baggage mass will incur an additional charge."
     )
     min_checked_baggage_mass = models.PositiveIntegerField(
-        blank=True,
-        null=True,
         help_text="If mass of checked baggage is less - customer shouldn't pay for it"
     )
     train_type = models.ForeignKey(
@@ -136,7 +132,7 @@ class Journey(models.Model):
         super().save(*args, **kwargs)
         if creating:
             Seat.objects.bulk_create([
-                Seat(journey=self, number=i+1)
+                Seat(journey=self, number=i)
                 for i in range(1, self.train.seats + 1)
             ])
 

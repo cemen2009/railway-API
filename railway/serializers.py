@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.validators import UniqueTogetherValidator
 
 from railway.models import (
@@ -120,6 +121,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ["id", "created_at", "user"]
         read_only_fields = ["id", "created_at", "user"]
+        permission_classes = [IsAuthenticated]  # user can create an order
 
 
 class OrderListSerializer(OrderSerializer):
@@ -179,6 +181,7 @@ class TicketSerializer(serializers.ModelSerializer):
             "seat",
             "order"
         ]
+        permission_classes = [IsAuthenticated]  # user can create a ticket
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

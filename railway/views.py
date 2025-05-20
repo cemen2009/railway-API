@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 from railway.models import (
     Station,
@@ -50,7 +50,6 @@ class TrainViewSet(viewsets.ModelViewSet):
 class SeatViewSet(viewsets.ModelViewSet):
     queryset = Seat.objects.all()
     serializer_class = SeatSerializer
-    permission_classes = (IsAdminUser,)
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -85,6 +84,7 @@ class CrewViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
         # adding authenticated user
@@ -102,8 +102,15 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 class TicketViewSet(viewsets.ModelViewSet):
-    queryset = Ticket.objects.all()
+    queryset = Ticket.objects.select_related(
+        "seat",
+        "journey__route__source",
+        "journey__route__destination",
+        "journey__train__train_type",
+        "order__user"
+    )
     serializer_class = TicketSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -114,7 +121,11 @@ class TicketViewSet(viewsets.ModelViewSet):
 
 
 class JourneyViewSet(viewsets.ModelViewSet):
-    queryset = Journey.objects.all()
+    queryset = Journey.objects.select_related(
+        "route__source",
+        "route__destination",
+        "train__train_type"
+    ).prefetch_related("crew")
     serializer_class = JourneySerializer
 
     def get_serializer_class(self):

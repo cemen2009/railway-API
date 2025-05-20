@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -121,7 +122,6 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ["id", "created_at", "user"]
         read_only_fields = ["id", "created_at", "user"]
-        permission_classes = [IsAuthenticated]  # user can create an order
 
 
 class OrderListSerializer(OrderSerializer):
@@ -181,7 +181,6 @@ class TicketSerializer(serializers.ModelSerializer):
             "seat",
             "order"
         ]
-        permission_classes = [IsAuthenticated]  # user can create a ticket
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -214,10 +213,11 @@ class TicketSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        seat = validated_data["seat"]
-        seat.is_occupied = True
-        seat.save()
-        return super().create(validated_data)
+        with transaction.atomic():
+            seat = validated_data["seat"]
+            seat.is_occupied = True
+            seat.save()
+            return super().create(validated_data)
 
 
 class TicketListSerializer(TicketSerializer):

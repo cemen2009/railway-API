@@ -1,0 +1,24 @@
+services:
+  railway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py migrate &&
+            python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8001:8000"
+    volumes:
+      - .:/app # hot reload
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16.9-alpine3.20
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
